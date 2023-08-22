@@ -4,7 +4,7 @@ import inspect
 from eugeroic import wakefulness
 
 
-def stay_awake(f=None, reason: str | None=None):
+def stay_awake(arg=None, reason: str | None=None):
     """A decorator to prevent the display from sleeping.
 
     The display will be kept awake for the duration of the decorated function.
@@ -19,8 +19,18 @@ def stay_awake(f=None, reason: str | None=None):
             available the name of the decorated function will be used.
     """
 
-    if f is None:
+    if (not callable(arg)) and isinstance(arg, str):
+        if  reason is None:
+            return functools.partial(stay_awake, reason=arg)
+        else:
+            raise TypeError(
+                "Cannot specify 'reason' as both a positional argument and "
+                "a keyword argument to stay_awake."
+            )
+    elif arg is None:
         return functools.partial(stay_awake, reason=reason)
+    else:
+        f = arg
 
     if reason is None:
         docstring = inspect.getdoc(f)
