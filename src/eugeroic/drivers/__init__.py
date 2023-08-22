@@ -19,6 +19,12 @@ else:
 @contextlib.contextmanager
 def wakefulness(reason: str) -> Generator[None, None, None]:
     """A context manager which prevents the display from sleeping.
+
+    Note:
+        This will not awaken the display if it is already asleep.
+
+    Args:
+        reason: The reason for keeping the display awake.
     """
     with _wakefulness(logger, reason):
         yield
