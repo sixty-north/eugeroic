@@ -2,7 +2,7 @@ import uuid
 
 from _pytest.fixtures import fixture
 
-from eugeroic.drivers.decorator import stay_awake
+from eugeroic import stay_awake
 
 @fixture
 def unique_reason():
