@@ -1,7 +1,12 @@
 import contextlib
 import ctypes.util
 import time
-from enum import IntEnum, StrEnum
+from enum import IntEnum
+
+try:
+    from enum import StrEnum  # Introduced in Python 3.11
+except ImportError:
+    from backports.strenum import StrEnum
 
 from eugeroic.drivers.macos.cfstringref import cfstringref
 
