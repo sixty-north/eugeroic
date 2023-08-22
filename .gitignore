@@ -140,3 +140,4 @@ dmypy.json
 # Generated API docs
 docs/source/api
 docs/build/
+.vscode/settings.json
