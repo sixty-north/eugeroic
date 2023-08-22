@@ -5,7 +5,7 @@ from collections.abc import Generator
 
 logger = logging.getLogger(__name__)
 
-platform = sys.platform
+platform = sys.platform.lower()
 if platform == "win32":
     from .windows.driver import wakefulness as _wakefulness
 elif platform == "darwin":
