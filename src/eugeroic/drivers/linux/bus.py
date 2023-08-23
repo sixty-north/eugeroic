@@ -7,6 +7,14 @@ from typing import Optional
 import time
 
 from dbus_next.aio import MessageBus
+from dbus_next.errors import (
+    InvalidAddressError,
+    InvalidIntrospectionError,
+    InvalidInterfaceNameError,
+    InvalidBusNameError,
+    InvalidObjectPathError,
+    InvalidMemberNameError,
+)
 
 
 SCREENSAVER_BUS = "org.freedesktop.ScreenSaver"
@@ -49,6 +57,7 @@ class FakeBusProxy:
         assert self.introspection["name"] == name
         return FakeScreenSaver()
 
+
 class FakeScreenSaver:
 
     _next_cookie = 1
@@ -84,16 +93,26 @@ async def _bus():
         pass
 
 async def screensaver(bus):
-    introspection = await bus.introspect(
-        SCREENSAVER_BUS,
-        SCREENSAVER_PATH,
-    )
-    obj = bus.get_proxy_object(
-        SCREENSAVER_BUS,
-        SCREENSAVER_PATH,
-        introspection,
-    )
-    return obj.get_interface(SCREENSAVER_BUS)
+    try:
+        introspection = await bus.introspect(
+            SCREENSAVER_BUS,
+            SCREENSAVER_PATH,
+        )
+        obj = bus.get_proxy_object(
+            SCREENSAVER_BUS,
+            SCREENSAVER_PATH,
+            introspection,
+        )
+        return obj.get_interface(SCREENSAVER_BUS)
+    except (
+        InvalidBusNameError,
+        InvalidObjectPathError,
+        InvalidInterfaceNameError,
+        InvalidMemberNameError,
+    ):
+        # The required endpoints for the screensave aren't available
+        return FakeScreenSaver()
+        
 
 
 async def _inhibit(bus, reason: str, app_name: Optional[str]=None) -> int:
