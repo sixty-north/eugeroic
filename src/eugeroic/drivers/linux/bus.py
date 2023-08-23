@@ -13,9 +13,69 @@ SCREENSAVER_BUS = "org.freedesktop.ScreenSaver"
 SCREENSAVER_PATH = "/org/freedesktop/ScreenSaver"
 
 
+class FakeMessageBus:
+    
+    def __init__(self):
+        self._connected = False
+
+    async def connect(self):
+        self._connected = True
+        return self       
+
+    def disconnect(self):
+        self._connected = False
+    
+    async def wait_for_disconnect(self):
+        while self._connected:
+            await asyncio.sleep(0)
+
+    async def introspect(self, name, path):
+        assert name == SCREENSAVER_BUS
+        assert path == SCREENSAVER_PATH
+        return dict(name=name, path=path)
+
+    def get_proxy_object(self, name, path, introspection):
+        assert introspection["name"] == name
+        assert introspection["path"] == path
+        return FakeBusProxy(introspection)
+
+
+class FakeBusProxy:
+
+    def __init__(self, introspection):
+        self.introspection = introspection
+
+    def get_interface(self, name):
+        assert self.introspection["name"] == name
+        return FakeScreenSaver()
+
+class FakeScreenSaver:
+
+    _next_cookie = 1
+
+    _extant_cookies = set()
+
+    async def call_inhibit(self, app_name, reason):
+        cookie = FakeScreenSaver._next_cookie
+        FakeScreenSaver._extant_cookies.add(cookie)
+        FakeScreenSaver._next_cookie += 1
+        return cookie
+    
+    async def call_un_inhibit(self, cookie):
+        FakeScreenSaver._extant_cookies.remove(cookie)
+
+
+
+def _make_bus():
+    try:
+        return MessageBus()
+    except Exception:
+        return FakeMessageBus()
+
+
 @asynccontextmanager
 async def _bus():
-    bus = await MessageBus().connect()
+    bus = await _make_bus().connect()
     try:
         yield bus
     finally:
