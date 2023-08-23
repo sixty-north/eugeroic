@@ -1,53 +1,75 @@
-# In order to use dbus-python on Debian 12, I had to,
-# sudo apt install libdbus-glib-1-2 libdbus-glib-1-dev
-# pip install dbus-python
-
+from contextlib import asynccontextmanager, contextmanager
 import sys
-import contextlib
+import asyncio
+import concurrent.futures
 from typing import Optional
 
-import dbus
+from dbus_next.aio import MessageBus
 
 
-_bus = None
-
-def bus():
-    global _bus
-    if _bus is None:
-        _bus = dbus.SessionBus()
-    return dbus.SessionBus()
+SCREENSAVER_BUS = "org.freedesktop.ScreenSaver"
+SCREENSAVER_PATH = "/org/freedesktop/ScreenSaver"
 
 
-_interface = None
+@asynccontextmanager
+async def _bus():
+    bus = await MessageBus().connect()
+    try:
+        yield bus
+    finally:
+        bus.wait_for_disconnect()
 
-def screensaver():
-    global _interface
-    if _interface is None:
-        proxy = bus().get_object("org.freedesktop.ScreenSaver", "/org/freedesktop/ScreenSaver")
-        _interface = dbus.Interface(proxy, 'org.freedesktop.ScreenSaver')
-    return _interface
+
+async def screensaver(bus):
+    introspection = await bus.introspect(
+        SCREENSAVER_BUS,
+        SCREENSAVER_PATH,
+    )
+    obj = bus.get_proxy_object(
+        SCREENSAVER_BUS,
+        SCREENSAVER_PATH,
+        introspection,
+    )
+    return obj.get_interface(SCREENSAVER_BUS)
+
+
+async def _inhibit(bus, reason: str, app_name: Optional[str]=None) -> int:
+    if app_name is None:
+        app_name = sys.argv[0]
+    s = await screensaver(bus)
+    cookie = await s.call_inhibit(app_name, reason)
+    return cookie
+
+
+async def _uninhibit(bus, cookie: int):
+    s = await screensaver(bus)
+    await s.call_un_inhibit(cookie)
+
+
+async def _ainhibit(reason: str, app_name: Optional[str]=None) -> int:
+    async with _bus() as bus:
+        return await _inhibit(bus, reason, app_name)
+
+
+async def _auninhibit(cookie: int):
+    async with _bus() as bus:
+        return await _uninhibit(bus, cookie)
+
+
+def _synchronize(coro):
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+        return pool.submit(asyncio.run, coro).result()    
 
 
 def inhibit(reason: str, app_name: Optional[str]=None) -> int:
-    """Inhibit the screensaver.
-    
-    Args:
-        reason: A description of the reason.
-        app_name: An optional app name. If not given the process name will be used.
+    return _synchronize(_ainhibit(reason, app_name))
 
-    Returns:
-        A cookie used to unqiuely identify this request, to be passed to uninhibit() when done.
-    """
-    if app_name is None:
-        app_name = sys.argv[0]
-    cookie = screensaver().Inhibit(app_name, reason)
-    return cookie
 
 def uninhibit(cookie: int):
-    screensaver().UnInhibit(cookie)
+    return _synchronize(_auninhibit(cookie))
 
 
-@contextlib.contextmanager
+@contextmanager
 def inhibited_screensaver(reason: str, app_name: Optional[str]=None):
     cookie = inhibit(reason, app_name)
     try:
