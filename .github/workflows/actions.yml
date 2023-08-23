@@ -32,7 +32,7 @@ jobs:
         run: sudo apt-get install -y dbus-x11
       - name: Run headless test (Linux)
         if: ${{ matrix.os=='ubuntu-latest' }}
-        run: xvfb-run python-m pytest tests/
+        run: xvfb-run python -m pytest tests/
         # uses: coactions/setup-xvfb@v1
         # with:
         #   run: python -m pytest tests/
