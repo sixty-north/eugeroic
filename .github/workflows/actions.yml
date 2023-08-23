@@ -23,23 +23,18 @@ jobs:
       - uses: "actions/setup-python@v4"
         with:
           python-version: "${{ matrix.python-version }}"
+      - name: Install package under test
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install ".[test]"
       - name: Run headless test (Linux)
         if: ${{ matrix.os=='ubuntu-latest' }}
         uses: coactions/setup-xvfb@v1
         with:
-          run: |
-            python -m pip install --upgrade pip
-            python -m pip install ".[test]"
-            if test -z "$DBUS_SESSION_BUS_ADDRESS" ; then
-              echo "Starting dbus" 
-              export $(dbus-launch)
-            fi
-            python -m pytest tests/
+          run: run-tests-with-dbus
       - name: Run tests
         if: ${{ matrix.os!='ubuntu-latest' }}
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install ".[test]"
           python -m pytest tests/
 
   package:
