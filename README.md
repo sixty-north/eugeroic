@@ -1,6 +1,6 @@
 # Eugeroic
 
-Tools for keeping a computer awake.
+Tools for keeping a computer display awake.
 
 ## Installation
 
@@ -28,3 +28,14 @@ The `stay_awake` decorator keeps the computer awake while the decorated function
     @stay_awake("Capture the screen")
     def capture_screen(seconds):
         ...
+
+
+How it works
+============
+
+On Windows calls to `SetThreadExecutionState` are used.
+
+On macOS IOKit Power Management functions are used.
+
+On Linux, an attempt is made to communicate with the desktop environment through D-Bus messages.
+
