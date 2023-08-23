@@ -27,6 +27,9 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install ".[test]"
+      - name: Install dbus
+        if: ${{ matrix.os=='ubuntu-latest' }}
+        run: sudo apt-get install -y dbus-x11
       - name: Run headless test (Linux)
         if: ${{ matrix.os=='ubuntu-latest' }}
         uses: coactions/setup-xvfb@v1
