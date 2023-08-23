@@ -31,7 +31,7 @@ jobs:
         if: ${{ matrix.os=='ubuntu-latest' }}
         uses: coactions/setup-xvfb@v1
         with:
-          run: run-tests-with-dbus
+          run: run-tests-with-dbus.bash
       - name: Run tests
         if: ${{ matrix.os!='ubuntu-latest' }}
         run: |
