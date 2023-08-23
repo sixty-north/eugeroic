@@ -32,6 +32,7 @@ jobs:
         uses: coactions/setup-xvfb@v1
         with:
           run: run-tests-with-dbus.bash
+          working-directory: ./
       - name: Run tests
         if: ${{ matrix.os!='ubuntu-latest' }}
         run: |
