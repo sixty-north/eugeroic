@@ -1,4 +1,5 @@
 import time
+from unittest.mock import patch
 
 from eugeroic import wakefulness
 
