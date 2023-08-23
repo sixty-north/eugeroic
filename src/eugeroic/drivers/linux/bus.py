@@ -17,8 +17,8 @@ async def _bus():
     try:
         yield bus
     finally:
-        bus.wait_for_disconnect()
-
+        #await bus.wait_for_disconnect()
+        pass
 
 async def screensaver(bus):
     introspection = await bus.introspect(
