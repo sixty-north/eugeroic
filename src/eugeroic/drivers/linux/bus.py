@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager, contextmanager
+import logging
 import sys
 import asyncio
 import threading
@@ -16,6 +17,7 @@ from dbus_next.errors import (
     InvalidMemberNameError,
 )
 
+logger = logging.getLogger(__name__)
 
 # This code is particularly convoluted because we want to use the dbus_next package
 # which is async, but we don't want to force the callers of this function to be async
@@ -51,14 +53,17 @@ class FakeMessageBus:
 
     async def connect(self):
         self._connected = True
+        logger.debug("Connect to fake D-Bus")
         return self
 
     def disconnect(self):
+        logger.debug("Disconnect from fake D-Bus")
         self._connected = False
 
     async def wait_for_disconnect(self):
         while self._connected:
             await asyncio.sleep(0)
+        logger.debug("Disconnected from fake D-Bus")
 
     async def introspect(self, name, path):
         assert name == SCREENSAVER_BUS
@@ -91,11 +96,15 @@ class FakeScreenSaver:
         cookie = FakeScreenSaver._next_cookie
         FakeScreenSaver._extant_cookies.add(cookie)
         FakeScreenSaver._next_cookie += 1
+        logger.debug("Fake ScreenSaver Inhibit gives cookie %r", cookie)
         return cookie
 
     async def call_un_inhibit(self, cookie):
         FakeScreenSaver._extant_cookies.remove(cookie)
+        logger.debug("Fake ScreenSaver UnInhibit: cookie %r", cookie)
 
+    async def call_simulate_user_activity(self):
+        logger.debug("Fake ScreenSaver SimulateUserActivity")
 
 
 def _make_bus():
@@ -142,17 +151,20 @@ async def _inhibit(bus, reason: str, app_name: Optional[str]=None) -> int:
         app_name = sys.argv[0]
     s = await screensaver(bus)
     cookie = await s.call_inhibit(app_name, reason)
+    logger.debug("ScreenSaver Inhibit: %r gives cookie %r", reason, cookie)
     return cookie
 
 
 async def _uninhibit(bus, cookie: int):
     s = await screensaver(bus)
     await s.call_un_inhibit(cookie)
+    logger.debug("ScreenSaver UnInhibit: cookie %r", cookie)
 
 
 async def _simulate_user_activity(bus):
     s = await screensaver(bus)
     await s.call_simulate_user_activity()
+    logger.debug("ScreenSaver SimulateUserActivity")
 
 
 async def _inhibited_screensaver(
