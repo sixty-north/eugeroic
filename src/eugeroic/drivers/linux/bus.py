@@ -150,16 +150,26 @@ async def _uninhibit(bus, cookie: int):
     await s.call_un_inhibit(cookie)
 
 
+async def _simulate_user_activity(bus):
+    s = await screensaver(bus)
+    await s.call_simulate_user_activity()
+
+
 async def _inhibited_screensaver(
     reason: str,
     app_name: Optional[str],
     on_inhibited: threading.Event,
     on_uninhibit: threading.Event,
     on_error: threading.Event,
+    wake: bool=True,
 ):
     try:
         async with _bus() as bus:
             cookie = await _inhibit(bus, reason, app_name)
+
+            if wake:
+                await _simulate_user_activity(bus)
+
             on_inhibited.set()
 
             while not on_uninhibit.is_set():
@@ -173,12 +183,25 @@ async def _inhibited_screensaver(
 
 
 @contextmanager
-def inhibited_screensaver(reason: str, app_name: Optional[str]=None):
+def inhibited_screensaver(reason: str, *, app_name: Optional[str]=None, wake: bool=True):
+    """A context manager to inhibit the screensaver.
+
+    Args:
+        reason: A descriptive reason for inhibiting the screensaver.
+
+        app_name: The name of the application inhibiting the screensaver. Defaults to the
+            name of the current executable.
+
+        wake: Whether to simulate user activity to wake the display. Defaults to True.
+
+    Raises:
+        Exception: If an error occurs while inhibiting the screensaver.
+    """
     on_inhibited = threading.Event()
     on_uninhibit = threading.Event()
     on_error = threading.Event()
     with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-        coro = _inhibited_screensaver(reason, app_name, on_inhibited, on_uninhibit, on_error)
+        coro = _inhibited_screensaver(reason, app_name, on_inhibited, on_uninhibit, on_error, wake)
         future = pool.submit(asyncio.run, coro)
 
         # Wait for on_inhibited, but accept that an error may have happened
