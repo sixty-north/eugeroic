@@ -109,16 +109,3 @@ def declare_local_user_activity(reason):
     """Declare local activity to wake the screen."""
     iokit = get_iokit()
     assertion_declare_user_activity(iokit, reason, UserActiveType.Local)
-    print("Declared local user activity.")
-
-
-def main():
-    declare_local_user_activity("Wake up!")
-    with power_management_assertion(AssertionType.NoDisplaySleep, Level.On, "Busy busy busy..."):
-        for i in range(600):
-            print(i)
-            time.sleep(1)
-
-
-if __name__ == '__main__':
-    main()
