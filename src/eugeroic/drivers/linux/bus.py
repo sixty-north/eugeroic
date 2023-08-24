@@ -17,22 +17,45 @@ from dbus_next.errors import (
 )
 
 
+# This code is particularly convoluted because we want to use the dbus_next package
+# which is async, but we don't want to force the callers of this function to be async
+# as well. So we start a separate thread with its own event loop, run the async stuff,
+# and then shut it down.
+#
+# We also can't call Inhibit with one bus connection, retain the cookie, and call UnInhibit [sic]
+# with another bus connection, because the cookie is only valid for the connection it was
+# created on. So we need to maintain the bus connection for the duration of the context manager.
+#
+# Additional complexity is added by the fact that we want to be able to raise exceptions
+# from the async code in the main thread, so we need to use threading.Event to signal
+# when the async code has finished, and then raise the exception in the main thread.
+#
+# Finally, we want to be able to use this code as a context manager, so we need to
+# be able to signal as the async code progresses and when the async code has finished, and then
+# wait in the main thread for those signals.
+#
+# Finally, a D-Bus may not be available, so we need to be able to fall back to a fake implementation
+# if the real one isn't available to allow the implementation to proceed gracefully (and be tested
+# in environments without a D-Bus). Even if the D-Bus is available, the required endpoints may not
+# be available, so we need to be able to fall back to a fake implementation in that case as well.
+
+
 SCREENSAVER_BUS = "org.freedesktop.ScreenSaver"
 SCREENSAVER_PATH = "/org/freedesktop/ScreenSaver"
 
 
 class FakeMessageBus:
-    
+
     def __init__(self):
         self._connected = False
 
     async def connect(self):
         self._connected = True
-        return self       
+        return self
 
     def disconnect(self):
         self._connected = False
-    
+
     async def wait_for_disconnect(self):
         while self._connected:
             await asyncio.sleep(0)
@@ -69,7 +92,7 @@ class FakeScreenSaver:
         FakeScreenSaver._extant_cookies.add(cookie)
         FakeScreenSaver._next_cookie += 1
         return cookie
-    
+
     async def call_un_inhibit(self, cookie):
         FakeScreenSaver._extant_cookies.remove(cookie)
 
@@ -110,9 +133,8 @@ async def screensaver(bus):
         InvalidInterfaceNameError,
         InvalidMemberNameError,
     ):
-        # The required endpoints for the screensave aren't available
+        # The required endpoints for the screensaver aren't available
         return FakeScreenSaver()
-        
 
 
 async def _inhibit(bus, reason: str, app_name: Optional[str]=None) -> int:
@@ -146,7 +168,7 @@ async def _inhibited_screensaver(
             await _uninhibit(bus, cookie)
     except:
         # If an error occurs, tell the parent thread to stop waiting
-        on_error.set()  
+        on_error.set()
         raise
 
 
