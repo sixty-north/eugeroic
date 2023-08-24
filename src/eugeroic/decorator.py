@@ -11,6 +11,20 @@ def stay_awake(arg=None, reason: str | None=None):
 
     This decorator may be used with or without arguments.
 
+    Examples:
+
+        @stay_awake
+        def my_function():
+            ...
+
+        @stay_awake("My function is doing something important.")
+        def my_function():
+            ...
+
+        @stay_awake(reason="My function is doing something important.")
+        def my_function():
+            ...
+
     Args:
         f: The function to decorate.
 
