@@ -3,7 +3,7 @@
 Tools in Python for keeping a computer display awake.
 
 eugeroic
-:  (_adjective_) keeping one awake. Wakefulness promoting agents.
+:  (_adjective_) keeping one awake. Of a wakefulness promoting agent.
 
 
 Sometimes you need to perform a task without the screensaver kicking in, or the display being
