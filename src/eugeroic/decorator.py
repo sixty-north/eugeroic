@@ -26,7 +26,8 @@ def stay_awake(arg=None, reason: str | None=None):
             ...
 
     Args:
-        f: The function to decorate.
+        arg: Either the function to decorate, or the reason (see below) supplied as a positional
+            argument.
 
         reason: An descriptive reason for keeping the display awake. If not provided the
             first line of the docstring of the decorated function will be used, or if not
