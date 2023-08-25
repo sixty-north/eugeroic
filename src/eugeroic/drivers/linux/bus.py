@@ -9,6 +9,7 @@ import time
 
 from dbus_next.aio import MessageBus
 from dbus_next.errors import (
+    DBusError,
     InvalidAddressError,
     InvalidIntrospectionError,
     InvalidInterfaceNameError,
@@ -146,26 +147,39 @@ async def screensaver(bus):
         return FakeScreenSaver()
 
 
-async def _inhibit(bus, reason: str, app_name: Optional[str]=None) -> int:
+async def _inhibit(bus, reason: str, app_name: Optional[str]=None) -> int | None:
     if app_name is None:
         app_name = sys.argv[0]
     s = await screensaver(bus)
-    cookie = await s.call_inhibit(app_name, reason)
-    logger.debug("ScreenSaver Inhibit: %r gives cookie %r", reason, cookie)
+    try:
+        cookie = await s.call_inhibit(app_name, reason)
+    except DBusError:
+        logger.debug("ScreenSaver Inhibit not available")
+        cookie = None
+    else:
+        logger.debug("ScreenSaver Inhibit: %r gives cookie %r", reason, cookie)
     return cookie
 
 
-async def _uninhibit(bus, cookie: int):
+async def _uninhibit(bus, cookie: int | None):
     s = await screensaver(bus)
-    await s.call_un_inhibit(cookie)
-    logger.debug("ScreenSaver UnInhibit: cookie %r", cookie)
+    if cookie is not None:
+        try:
+            await s.call_un_inhibit(cookie)
+        except DBusError:
+            logger.debug("ScreenSaver UnInhibit not available")
+        else:
+            logger.debug("ScreenSaver UnInhibit: cookie %r", cookie)
 
 
 async def _simulate_user_activity(bus):
     s = await screensaver(bus)
-    await s.call_simulate_user_activity()
-    logger.debug("ScreenSaver SimulateUserActivity")
-
+    try:
+        await s.call_simulate_user_activity()
+    except DBusError:
+        logger.debug("ScreenSaver SimulateUserActivity not available")
+    else:
+        logger.debug("ScreenSaver SimulateUserActivity")
 
 async def _inhibited_screensaver(
     reason: str,
